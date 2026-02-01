@@ -1,17 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { clerkMiddleware, requireAuth, getAuth } from '@clerk/express';
+import type { RequestHandler } from 'express';
 
 /**
  * Clerk authentication middleware
  * Validates JWT tokens and makes auth available on request
  */
-export const authMiddleware = clerkMiddleware();
+export const authMiddleware: RequestHandler = clerkMiddleware();
 
 /**
  * Require authentication middleware
  * Use this to protect routes that require a logged-in user
  */
-export const requireAuthMiddleware = requireAuth();
+export const requireAuthMiddleware: RequestHandler = requireAuth();
 
 /**
  * Extract user information from Clerk JWT and add to request
