@@ -5,10 +5,10 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config.settings import settings
-from .logger.setup import setup_logging, get_logger
-from .middleware.logging import RequestLoggingMiddleware
-from .routes import health
+from config.settings import settings
+from logger.setup import setup_logging, get_logger
+from middleware.logging import RequestLoggingMiddleware
+from routes import health
 
 # Initialize logging
 setup_logging(log_level=settings.log_level)

@@ -3,11 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:manual": "python3 -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8800",
-    "start": "python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8800",
-    "install": "echo 'Python dependencies managed via uv - run manual setup if needed'",
-    "lint": "echo 'Run: ruff check src/'",
-    "format": "echo 'Run: ruff format src/'",
-    "test": "echo 'Run: pytest'"
+    "dev": "uv run -- python src/main.py",
+    "start": "uv run -- python src/main.py"
   }
 }
