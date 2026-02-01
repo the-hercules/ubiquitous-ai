@@ -1,5 +1,4 @@
-ARG NODE_VERSION=24.13.1
-FROM node:${NODE_VERSION}-alpine AS base
+FROM node:24-alpine as base
 
 FROM base AS prepare
 # Set working directory

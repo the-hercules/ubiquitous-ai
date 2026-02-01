@@ -1,5 +1,4 @@
-ARG NODE_VERSION=24.13.1
-FROM node:${NODE_VERSION}-alpine AS base
+FROM node:24-alpine as base
 
 FROM base AS prepare
 WORKDIR /app
@@ -19,7 +18,7 @@ RUN corepack enable pnpm && pnpm install --frozen-lockfile
 COPY --from=prepare /app/out/full/ .
 RUN pnpm turbo build --filter=api
 
-FROM node:${NODE_VERSION}-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 # Don't run production as root
