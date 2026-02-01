@@ -1,0 +1,209 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// MULTI-TENANT CORE MODELS
+// ==========================================
+
+model Tenant {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  settings   Json?    @default("{}")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  users      User[]
+  clients    Client[]
+  projects   Project[]
+  campaign_plans CampaignPlan[]
+  ideas      Idea[]
+  comments   Comment[]
+
+  @@map("tenants")
+}
+
+enum UserRole {
+  PLATFORM_ADMIN
+  AGENCY_STAFF
+  CLIENT
+}
+
+model User {
+  id            String   @id @default(uuid())
+  clerk_user_id String   @unique
+  email         String   @unique
+  role          UserRole
+  tenant_id     String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  tenant        Tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  comments      Comment[]
+
+  @@index([tenant_id])
+  @@index([clerk_user_id])
+  @@map("users")
+}
+
+model Client {
+  id           String   @id @default(uuid())
+  name         String
+  tenant_id    String
+  contact_info Json?    @default("{}")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  tenant                Tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  projects              Project[]
+  organization_profiles OrganizationProfile[]
+
+  @@index([tenant_id])
+  @@map("clients")
+}
+
+// ==========================================
+// PROJECT & CAMPAIGN MODELS
+// ==========================================
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  client_id   String
+  tenant_id   String
+  start_date  DateTime?
+  end_date    DateTime?
+  status      ProjectStatus @default(PLANNING)
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  // Relations
+  client         Client         @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  tenant         Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  campaign_plans CampaignPlan[]
+
+  @@index([tenant_id])
+  @@index([client_id])
+  @@map("projects")
+}
+
+model OrganizationProfile {
+  id               String   @id @default(uuid())
+  client_id        String   @unique
+  tenant_id        String
+  brand_tone       String?
+  industry         String?
+  target_audience  String?
+  voice_attributes Json?    @default("{}")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Relations
+  client Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@map("organization_profiles")
+}
+
+model CampaignPlan {
+  id                          String   @id @default(uuid())
+  project_id                  String
+  tenant_id                   String
+  goals                       Json?    @default("[]")
+  themes                      Json?    @default("[]")
+  events                      Json?    @default("[]")
+  num_posts                   Int      @default(0)
+  num_reels                   Int      @default(0)
+  post_reel_split_percentage  Float?
+  meeting_notes               String?  @db.Text
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  // Relations
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  ideas   Idea[]
+
+  @@index([tenant_id])
+  @@index([project_id])
+  @@map("campaign_plans")
+}
+
+// ==========================================
+// IDEA & CONTENT MODELS
+// ==========================================
+
+enum IdeaType {
+  POST
+  REEL
+}
+
+enum IdeaStatus {
+  GENERATED
+  AGENCY_REVIEWED
+  AGENCY_APPROVED
+  CLIENT_REVIEWED
+  CLIENT_APPROVED
+  REVISION_REQUESTED
+}
+
+model Idea {
+  id               String     @id @default(uuid())
+  campaign_plan_id String
+  tenant_id        String
+  type             IdeaType
+  status           IdeaStatus @default(GENERATED)
+  content          Json       @default("{}")
+  rating           Int?       @default(0)
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+
+  // Relations
+  campaign_plan CampaignPlan @relation(fields: [campaign_plan_id], references: [id], onDelete: Cascade)
+  tenant        Tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  comments      Comment[]
+
+  @@index([tenant_id])
+  @@index([campaign_plan_id])
+  @@index([status])
+  @@map("ideas")
+}
+
+model Comment {
+  id           String   @id @default(uuid())
+  idea_id      String
+  user_id      String
+  tenant_id    String
+  comment_text String   @db.Text
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  idea   Idea   @relation(fields: [idea_id], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@index([idea_id])
+  @@index([user_id])
+  @@map("comments")
+}

@@ -1,6 +1,28 @@
-version: "3"
+version: "3.8"
 
 services:
+  # PostgreSQL Database
+  postgres:
+    container_name: postgres
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ubiquitous_ai_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Frontend
   web:
     container_name: web
     build:
@@ -8,9 +30,16 @@ services:
       dockerfile: ./apps/web/Dockerfile
     restart: always
     ports:
-      - 3000:3000
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     networks:
       - app_network
+    depends_on:
+      - api
+
+  # Express Backend API
   api:
     container_name: api
     build:
@@ -18,12 +47,39 @@ services:
       dockerfile: ./apps/api/Dockerfile
     restart: always
     ports:
-      - 3001:3001
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ubiquitous_ai_dev
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - AI_SERVICE_URL=http://ai-service:8800
+      - PORT=3001
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Python AI Service
+  ai-service:
+    container_name: ai-service
+    build:
+      context: .
+      dockerfile: ./apps/ai-service/Dockerfile
+    restart: always
+    ports:
+      - "8800:8800"
+    environment:
+      - PORT=8800
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LOG_LEVEL=info
     networks:
       - app_network
 
-# Define a network, which allows containers to communicate
-# with each other, by using their container name as a hostname
+# Define volumes for data persistence
+volumes:
+  postgres_data:
+
+# Define a network for container communication
 networks:
   app_network:
-    external: true
+    driver: bridge

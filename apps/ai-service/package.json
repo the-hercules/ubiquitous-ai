@@ -1,0 +1,13 @@
+{
+  "name": "ai-service",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8800",
+    "start": "python -m uvicorn src.main:app --host 0.0.0.0 --port 8800",
+    "install": "echo 'Python dependencies managed via uv - run: cd apps/ai-service && uv pip install --system -r pyproject.toml'",
+    "lint": "ruff check src/",
+    "format": "ruff format src/",
+    "test": "pytest"
+  }
+}
