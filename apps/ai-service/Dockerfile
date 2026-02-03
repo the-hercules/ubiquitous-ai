@@ -14,8 +14,11 @@ COPY apps/ai-service/src ./src
 # Install dependencies using uv
 RUN uv pip install --system -r pyproject.toml
 
+# Set Python path so imports work correctly
+ENV PYTHONPATH=/app/src
+
 # Expose port
 EXPOSE 8800
 
 # Run the application
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8800"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8800"]

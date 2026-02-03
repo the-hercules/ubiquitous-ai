@@ -23,7 +23,7 @@ if [ $# -eq 0 ]; then
     echo "Available commands:"
     echo "  install      - Install all dependencies"
     echo "  setup        - Complete initial setup"
-    echo "  start        - Start all services with Docker"
+    echo "  start        - Start all services with Docker (production-like)"
     echo "  stop         - Stop all services"
     echo "  logs         - View service logs"
     echo "  db:migrate   - Run database migrations"
@@ -34,6 +34,9 @@ if [ $# -eq 0 ]; then
     echo "  lint         - Lint all code"
     echo "  clean        - Clean all build artifacts"
     echo "  health       - Check all services health"
+    echo
+    echo "💡 For local development (faster):"
+    echo "   ./dev-local.sh - Run services locally without Docker"
     exit 0
 fi
 
@@ -81,8 +84,9 @@ case $COMMAND in
         ;;
     
     start)
-        echo -e "${YELLOW}Starting all services...${NC}"
-        docker compose up -d
+        echo -e "${YELLOW}Starting all services with Docker...${NC}"
+        echo -e "${YELLOW}Note: This rebuilds images if code changed${NC}"
+        docker compose up -d --build
         echo -e "${GREEN}✓ Services started${NC}"
         echo
         echo "Services running at:"
@@ -91,6 +95,7 @@ case $COMMAND in
         echo "  AI Service: http://localhost:8800"
         echo
         echo "View logs: ./dev.sh logs"
+        echo "Check health: ./dev.sh health"
         ;;
     
     stop)
