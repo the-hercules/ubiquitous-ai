@@ -3,6 +3,7 @@ import morgan from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
 import { authMiddleware, extractUserMiddleware } from "./middleware/auth";
+import apiRoutes from "./routes";
 import { errorHandler, notFoundHandler } from "./middleware/error";
 
 // Load environment variables
@@ -49,13 +50,21 @@ export const createServer = (): Express => {
   app.use("/api", authMiddleware);
   app.use("/api", extractUserMiddleware);
 
-  // API routes will be added here
+  // Mount API routes (protected by Clerk middleware above)
+  app.use('/api', apiRoutes);
+
   // Example protected route
-  app.get("/api/me", (req: Request, res: Response) => {
+  app.get('/api/me', (req: Request, res: Response) => {
     return res.json({
       userId: req.userId,
       tenantId: req.tenantId,
-      message: "Authenticated user information"
+      user: {
+        id: (req as any).user?.id,
+        email: (req as any).user?.email,
+        role: (req as any).user?.role,
+        tenant_id: (req as any).user?.tenant_id,
+      },
+      message: 'Authenticated user information'
     });
   });
 

@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { clerkMiddleware, requireAuth, getAuth } from '@clerk/express';
 import type { RequestHandler } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
  * Clerk authentication middleware
@@ -15,9 +18,9 @@ export const authMiddleware: RequestHandler = clerkMiddleware();
 export const requireAuthMiddleware: RequestHandler = requireAuth();
 
 /**
- * Extract user information from Clerk JWT and add to request
+ * Extract user information from Clerk JWT, upsert local user, and add to request
  */
-export const extractUserMiddleware = (
+export const extractUserMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -37,10 +40,26 @@ export const extractUserMiddleware = (
     (req as any).clerkUser = auth;
     
     // Extract organization ID (tenant ID) from Clerk
-    // In Clerk, organizations represent agencies (tenants)
-    if (auth.orgId) {
-      (req as any).tenantId = auth.orgId;
+    if ((auth as any).orgId) {
+      (req as any).tenantId = (auth as any).orgId;
     }
+
+    // Upsert local user record (create on first login)
+    const email = (auth as any).email || (auth as any).emailAddresses?.[0]?.emailAddress || '';
+    if (!email) {
+      return res.status(400).json({ error: 'Email not found in Clerk auth' });
+    }
+
+    const user = await prisma.user.upsert({
+      where: { clerk_user_id: auth.userId },
+      update: { email },
+      create: { 
+        clerk_user_id: auth.userId, 
+        email: email.toLowerCase()
+      },
+    });
+
+    (req as any).user = user;
 
     next();
   } catch (error) {
@@ -58,6 +77,7 @@ declare global {
       userId?: string;
       tenantId?: string;
       clerkUser?: any;
+      user?: any;
     }
   }
 }

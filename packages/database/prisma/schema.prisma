@@ -23,19 +23,22 @@ model Tenant {
   updated_at DateTime @updatedAt
 
   // Relations
-  users      User[]
-  clients    Client[]
-  projects   Project[]
+  users         User[]
+  clients       Client[]
+  projects      Project[]
   campaign_plans CampaignPlan[]
-  ideas      Idea[]
-  comments   Comment[]
+  ideas         Idea[]
+  comments      Comment[]
+  members       TenantMember[]
 
   @@map("tenants")
 }
 
 enum UserRole {
   PLATFORM_ADMIN
-  AGENCY_STAFF
+  OWNER
+  ADMIN
+  TEAM
   CLIENT
 }
 
@@ -43,14 +46,17 @@ model User {
   id            String   @id @default(uuid())
   clerk_user_id String   @unique
   email         String   @unique
-  role          UserRole
+  role          UserRole?
   tenant_id     String?
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
   // Relations
-  tenant        Tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  comments      Comment[]
+  tenant           Tenant?              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  comments         Comment[]
+  invitations      Invitation[]        @relation("InvitedBy")
+  tenant_members   TenantMember[]
+  project_members  ProjectMembership[]
 
   @@index([tenant_id])
   @@index([clerk_user_id])
@@ -97,9 +103,10 @@ model Project {
   updated_at  DateTime      @updatedAt
 
   // Relations
-  client         Client         @relation(fields: [client_id], references: [id], onDelete: Cascade)
-  tenant         Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  campaign_plans CampaignPlan[]
+  client           Client              @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  tenant           Tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  campaign_plans   CampaignPlan[]
+  members          ProjectMembership[]
 
   @@index([tenant_id])
   @@index([client_id])
@@ -206,4 +213,69 @@ model Comment {
   @@index([idea_id])
   @@index([user_id])
   @@map("comments")
+}
+
+// ==========================================
+// INVITATION & MEMBERSHIP MODELS
+// ==========================================
+
+model Invitation {
+  id          String   @id @default(uuid())
+  email       String
+  token_hash  String   @unique
+  role        UserRole
+  scope       String
+  resource_id String
+  invited_by  String
+  status      String   @default("PENDING")
+  expires_at  DateTime
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  invitedByUser User @relation(fields: [invited_by], references: [id], onDelete: Cascade, name: "InvitedBy")
+
+  @@index([email])
+  @@index([resource_id])
+  @@index([status])
+  @@map("invitations")
+}
+
+model TenantMember {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  user_id    String
+  role       UserRole
+  status     String   @default("ACTIVE")
+  invited_by String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, user_id])
+  @@index([tenant_id])
+  @@index([user_id])
+  @@map("tenant_members")
+}
+
+model ProjectMembership {
+  id          String   @id @default(uuid())
+  project_id  String
+  user_id     String
+  role        UserRole
+  status      String   @default("ACTIVE")
+  invited_by  String?
+  invited_at  DateTime?
+  accepted_at DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([project_id, user_id])
+  @@index([project_id])
+  @@index([user_id])
+  @@map("project_memberships")
 }
