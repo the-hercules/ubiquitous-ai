@@ -6,7 +6,6 @@ import { authMiddleware, extractUserMiddleware } from "./middleware/auth";
 import apiRoutes from "./routes";
 import { errorHandler, notFoundHandler } from "./middleware/error";
 
-// Load environment variables
 dotenv.config();
 
 export const createServer = (): Express => {

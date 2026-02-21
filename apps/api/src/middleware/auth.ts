@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { clerkMiddleware, requireAuth, getAuth } from '@clerk/express';
-import type { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
+import { PrismaClient } from "@prisma/client";
+import type { RequestHandler } from "express";
+import { NextFunction, Request, Response } from "express";
 
 const prisma = new PrismaClient();
 
@@ -23,39 +23,40 @@ export const requireAuthMiddleware: RequestHandler = requireAuth();
 export const extractUserMiddleware = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const auth = getAuth(req);
-    
+
     if (!auth || !auth.userId) {
       return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'No valid authentication token provided'
+        error: "Unauthorized",
+        message: "No valid authentication token provided",
       });
     }
 
     // Add user information to request
     (req as any).userId = auth.userId;
     (req as any).clerkUser = auth;
-    
+
     // Extract organization ID (tenant ID) from Clerk
     if ((auth as any).orgId) {
       (req as any).tenantId = (auth as any).orgId;
     }
 
     // Upsert local user record (create on first login)
-    const email = (auth as any).email || (auth as any).emailAddresses?.[0]?.emailAddress || '';
+    const email = auth?.sessionClaims?.email;
+
     if (!email) {
-      return res.status(400).json({ error: 'Email not found in Clerk auth' });
+      return res.status(400).json({ error: "Email not found in Clerk auth" });
     }
 
     const user = await prisma.user.upsert({
       where: { clerk_user_id: auth.userId },
       update: { email },
-      create: { 
-        clerk_user_id: auth.userId, 
-        email: email.toLowerCase()
+      create: {
+        clerk_user_id: auth.userId,
+        email: email.toLowerCase(),
       },
     });
 
@@ -63,10 +64,10 @@ export const extractUserMiddleware = async (
 
     next();
   } catch (error) {
-    console.error('Error extracting user from auth token:', error);
+    console.error("Error extracting user from auth token:", error);
     return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Invalid authentication token'
+      error: "Unauthorized",
+      message: "Invalid authentication token",
     });
   }
 };
